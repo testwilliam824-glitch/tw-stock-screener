@@ -27,6 +27,7 @@ warnings.filterwarnings("ignore")
 # 重用 v1 的指標函式
 from screener import (macd_hist, three_black_then_red,
                       falling_wedge_score, hs_bottom_score, fetch as yf_fetch)
+from enrich import build_enrichment, ENRICH_COLS
 
 H = {"User-Agent": "Mozilla/5.0"}
 CODE_RE = re.compile(r"^[1-9]\d{3}$")   # 只要 4 位數普通股，排除 ETF(00xxx)/權證
@@ -167,6 +168,13 @@ def main():
     finalists["_60分量比"] = finalists["code"].map(lambda c: h_flags.get(c, (False, None))[1])
     finalists["全條件"] = finalists["⑤60分三黑轉紅"]   # 已含①③④，再加⑤
 
+    # ===== 決選股加料：基本面 + 籌碼（官方一次抓全市場）=====
+    if len(finalists):
+        print("⑤ 為決選股補上基本面/籌碼欄位 ...", flush=True)
+        enr = build_enrichment()
+        for col in ENRICH_COLS:
+            finalists[col] = finalists["code"].map(lambda c, k=col: (enr.get(c) or {}).get(k))
+
     # 輸出
     pd.set_option("display.unicode.east_asian_width", True)
     pd.set_option("display.width", 220)
@@ -178,8 +186,10 @@ def main():
     print(f"全市場掃描完成 {pd.Timestamp.now():%Y-%m-%d %H:%M}")
     print("=" * 80)
     full = finalists[finalists["全條件"]]
-    cols = ["code", "name", "market", "price", "③MACD_Nin", "_翻紅幾根前",
-            "④日線三黑轉紅", "⑤60分三黑轉紅", "型態分", "楔形", "頭肩底", "_資料警告"]
+    cols = ["code", "name", "market", "price", "③MACD_Nin", "④日線三黑轉紅",
+            "⑤60分三黑轉紅", "三大法人張", "外資張", "投信張", "PE", "PB", "殖利率",
+            "型態分", "_資料警告"]
+    cols = [c for c in cols if c in finalists.columns]   # 決選0檔時 enrich 欄不存在，過濾掉
     if len(full):
         print(f"\n★ 全條件命中（①③④⑤全過）：{len(full)} 檔")
         print(full.sort_values("型態分", ascending=False)[cols].to_string(index=False))
