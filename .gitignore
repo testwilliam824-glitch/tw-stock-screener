@@ -13,3 +13,4 @@ screen_result.csv
 reports/launchd.out.log
 reports/launchd.err.log
 scan.log
+daily_scan_cloud.py
