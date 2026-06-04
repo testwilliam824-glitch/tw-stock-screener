@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# 本機快取與大型中間檔（雲端會重新產生，不需版控）
+.cache/
+*.pkl
+scan_all.csv
+scan_finalists.csv
+screen_result.csv
+
+# 本機 launchd 系統日誌（mac 專用）
+reports/launchd.out.log
+reports/launchd.err.log
+scan.log
