@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>臺股選股終端 · TW Stock Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0d11; --panel:#15171f; --panel2:#1b1e28;
+  --ink:#ece6d6; --muted:#8b897c; --faint:#56544b;
+  --gold:#d9a850; --gold-dim:#8c7034;
+  --up:#ff5447;      /* 台股紅：漲 / 買超 */
+  --down:#2ec27e;    /* 台股綠：跌 / 賣超 */
+  --line:rgba(236,230,214,.08);
+  --line2:rgba(236,230,214,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans TC",system-ui,sans-serif; font-weight:400;
+  line-height:1.5; min-height:100vh; overflow-x:hidden;
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(217,168,80,.06), transparent 60%),
+    linear-gradient(var(--line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:auto, 46px 46px, 46px 46px;
+}
+/* 顆粒噪點 */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+/* ── Header ── */
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+  gap:14px;padding-bottom:20px;border-bottom:1px solid var(--line2);position:relative}
+.brand .kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.32em;
+  color:var(--gold);text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 0 rgba(255,84,71,.6);
+  animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,84,71,.5)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+h1{font-family:"Noto Serif TC",serif;font-weight:900;font-size:clamp(26px,5vw,40px);
+  letter-spacing:.02em;line-height:1.05}
+h1 .en{display:block;font-family:"IBM Plex Mono",monospace;font-weight:500;
+  font-size:12px;letter-spacing:.28em;color:var(--muted);margin-top:8px}
+.meta{text-align:right;font-size:12px;color:var(--muted)}
+.meta .date{font-family:"IBM Plex Mono",monospace;font-size:22px;color:var(--ink);letter-spacing:.04em}
+.meta select{margin-top:6px;background:var(--panel);color:var(--ink);border:1px solid var(--line2);
+  border-radius:6px;padding:4px 8px;font-family:"IBM Plex Mono",monospace;font-size:12px}
+
+/* ── Funnel ── */
+.section-label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--faint);margin:36px 0 14px;display:flex;align-items:center;gap:12px}
+.section-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.fcell{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 14px;position:relative;overflow:hidden}
+.fcell .n{font-family:"IBM Plex Mono",monospace;font-size:30px;font-weight:600;letter-spacing:-.02em}
+.fcell .l{font-size:12px;color:var(--muted);margin-top:2px}
+.fcell .bar{position:absolute;left:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-dim))}
+.fcell.k1 .n{color:var(--ink)} .fcell.k2 .n{color:#e8c98a} .fcell.k3 .n{color:var(--gold)} .fcell.k4 .n{color:var(--up)}
+.cov{margin-top:12px;font-size:12px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.cov b{color:var(--ink);font-weight:500}
+
+/* ── Cards ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:14px;padding:16px 16px 14px;position:relative;overflow:hidden;
+  opacity:0;transform:translateY(14px);animation:rise .6s forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+.card.buy::before{background:var(--up)} .card.sell::before{background:var(--down)}
+.card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.tick{display:flex;align-items:baseline;gap:8px}
+.tick .code{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--gold);letter-spacing:.05em}
+.tick .nm{font-family:"Noto Serif TC",serif;font-weight:700;font-size:20px}
+.mkt{font-size:10px;color:var(--muted);border:1px solid var(--line2);border-radius:20px;
+  padding:2px 8px;font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+.price{font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:600;text-align:right}
+.price small{display:block;font-size:10px;color:var(--faint);font-weight:400;letter-spacing:.1em}
+.rank{position:absolute;top:10px;right:12px;font-family:"Noto Serif TC",serif;font-size:40px;
+  font-weight:900;color:rgba(236,230,214,.05);line-height:1}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.stat .k{font-size:10px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;font-family:"IBM Plex Mono",monospace}
+.stat .v{font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:500;margin-top:1px}
+.v.up{color:var(--up)} .v.down{color:var(--down)} .v.dim{color:var(--muted)}
+.flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.flag{font-size:10px;font-family:"IBM Plex Mono",monospace;padding:3px 8px;border-radius:5px;
+  border:1px solid var(--line2);color:var(--muted)}
+.flag.on{background:rgba(255,84,71,.12);border-color:rgba(255,84,71,.4);color:#ff8a80}
+.meter{margin-top:12px}
+.meter .track{height:5px;background:rgba(236,230,214,.08);border-radius:4px;overflow:hidden}
+.meter .fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+.meter .lab{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);
+  font-family:"IBM Plex Mono",monospace;margin-bottom:4px;letter-spacing:.08em}
+.warn{margin-top:8px;font-size:10px;color:#e0a83c}
+
+.empty{background:var(--panel);border:1px dashed var(--line2);border-radius:14px;
+  padding:26px;text-align:center;color:var(--muted)}
+.empty b{color:var(--ink);font-family:"Noto Serif TC",serif;font-size:17px;display:block;margin-bottom:4px}
+
+/* ── Legend / Footer ── */
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:11px;color:var(--muted)}
+.legend i{font-style:normal;display:inline-flex;align-items:center;gap:6px}
+.swatch{width:10px;height:10px;border-radius:2px;display:inline-block}
+footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:11px;color:var(--faint);line-height:1.7}
+footer .dis{color:var(--muted);border-left:2px solid var(--gold-dim);padding-left:12px;margin-bottom:12px}
+footer a{color:var(--gold-dim)}
+.loading{text-align:center;padding:80px 0;color:var(--muted);font-family:"IBM Plex Mono",monospace;letter-spacing:.2em}
+@media(max-width:560px){
+  .wrap{padding:20px 14px 60px}
+  .funnel{grid-template-columns:1fr 1fr}
+  .fcell .n{font-size:26px}
+  .cards{grid-template-columns:1fr}
+  .meta{text-align:left}
+  header{align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="kicker"><span class="dot"></span> LIVE · 每交易日 15:00 自動更新</div>
+      <h1>臺股選股終端<span class="en">TAIWAN TECHNICAL SCREENER</span></h1>
+    </div>
+    <div class="meta">
+      <div class="date" id="date">——</div>
+      <div id="gen">載入中…</div>
+      <select id="hist" onchange="loadDate(this.value)" style="display:none"></select>
+    </div>
+  </header>
+
+  <div id="root"><div class="loading">◧ 載入掃描資料中 ◧</div></div>
+
+  <footer>
+    <div class="dis">⚠ 本頁為技術面資訊整理，<b style="color:var(--ink)">非投資建議</b>。型態分為程式量化近似，「落後」不等於「會補漲」；請務必自行看圖、查財報與籌碼後再決定。</div>
+    <div class="legend">
+      <i><span class="swatch" style="background:var(--up)"></span>紅 = 漲／法人買超</i>
+      <i><span class="swatch" style="background:var(--down)"></span>綠 = 跌／法人賣超</i>
+      <i><span class="swatch" style="background:var(--gold)"></span>型態分（楔形／頭肩底近似）</i>
+    </div>
+    <div style="margin-top:12px">資料來源：證交所 STOCK_DAY_ALL／T86／BWIBBU．櫃買 OpenAPI（官方）；日線 yfinance 並與官方收盤交叉驗證。
+      ｜ <a href="https://github.com/testwilliam824-glitch/tw-stock-screener" target="_blank">原始碼 GitHub</a></div>
+  </footer>
+</div>
+
+<script>
+const F=(v,d=2)=>v==null||isNaN(v)?'—':Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const signCls=v=>v==null?'dim':(v>0?'up':(v<0?'down':'dim'));
+const signNum=(v,d=0)=>v==null?'—':(v>0?'+':'')+F(v,d);
+
+function chip(item){
+  const buy = item.insti3>0, sell=item.insti3<0;
+  const cls = buy?'buy':(sell?'sell':'');
+  const pe = item.pe==null?'—':(item.pe>200?'高':F(item.pe,1));
+  return `
+  <div class="card ${cls}" style="animation-delay:${item._i*55}ms">
+    <div class="rank">${item._r||''}</div>
+    <div class="top">
+      <div class="tick"><span class="code">${item.code}</span><span class="nm">${item.name}</span></div>
+      <div><div class="price">${F(item.price,2)}<small>${item.market}</small></div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">三大法人 (張)</div><div class="v ${signCls(item.insti3)}">${signNum(item.insti3)}</div></div>
+      <div class="stat"><div class="k">外資 (張)</div><div class="v ${signCls(item.foreign)}">${signNum(item.foreign)}</div></div>
+      <div class="stat"><div class="k">本益比 PE</div><div class="v dim">${pe}</div></div>
+      <div class="stat"><div class="k">淨值比 / 殖利率</div><div class="v dim">${F(item.pb,2)} / ${item.yield==null?'—':F(item.yield,1)+'%'}</div></div>
+    </div>
+    <div class="meter">
+      <div class="lab"><span>型態近似分</span><span>${F(item.pattern,0)}</span></div>
+      <div class="track"><div class="fill" style="width:${Math.max(2,Math.min(100,item.pattern||0))}%"></div></div>
+    </div>
+    <div class="flags">
+      <span class="flag ${item.macd?'on':''}">MACD翻紅${item.macd&&item.macd_days!=null?` ${item.macd_days==0?'今':item.macd_days+'日前'}`:''}</span>
+      <span class="flag ${item.candle?'on':''}">日線三黑轉紅</span>
+      ${item.min60!=null?`<span class="flag ${item.min60?'on':''}">60分對齊</span>`:''}
+    </div>
+    ${item.warn?'<div class="warn">⚠ 官方／yfinance 收盤有落差，數據待確認</div>':''}
+  </div>`;
+}
+
+function render(d){
+  document.getElementById('date').textContent=d.date;
+  document.getElementById('gen').textContent='更新於 '+d.generated_at;
+  const f=d.funnel, c=d.coverage||{};
+  const pct=(n)=>f.candidates?Math.max(4,n/f.candidates*100):0;
+  let html=`
+  <div class="section-label">篩選漏斗 · FUNNEL</div>
+  <div class="funnel">
+    <div class="fcell k1"><div class="n mono">${f.candidates}</div><div class="l">價格 10–100 候選</div><div class="bar" style="width:100%"></div></div>
+    <div class="fcell k2"><div class="n mono">${f.macd}</div><div class="l">MACD 3日內翻紅</div><div class="bar" style="width:${pct(f.macd)}%"></div></div>
+    <div class="fcell k3"><div class="n mono">${f.candle}</div><div class="l">日線三黑轉紅</div><div class="bar" style="width:${pct(f.candle)}%"></div></div>
+    <div class="fcell k4"><div class="n mono">${f.finalists}</div><div class="l">①③④ 全過決選</div><div class="bar" style="width:${pct(f.finalists)}%"></div></div>
+  </div>
+  <div class="cov">市場覆蓋：上市 <b>${c.listed||'—'}</b> ＋ 上櫃 <b>${c.otc||'—'}</b> = <b>${(c.listed||0)+(c.otc||0)}</b> 檔</div>`;
+
+  html+=`<div class="section-label">★ 決選股 · FINALISTS（①③④⑤ 全符合）</div>`;
+  if(d.finalists && d.finalists.length){
+    html+=`<div class="cards">`+d.finalists.map((x,i)=>chip({...x,_i:i,_r:'★'})).join('')+`</div>`;
+  }else{
+    html+=`<div class="empty"><b>今日無完全符合的決選股</b>多時間框架同時對齊本就罕見 — 以下為最接近的觀察名單。</div>`;
+  }
+
+  html+=`<div class="section-label">觀察名單 · WATCHLIST（MACD 已翻紅 · 依型態分）</div>`;
+  html+=`<div class="cards">`+d.watch.map((x,i)=>chip({...x,_i:i,_r:i+1})).join('')+`</div>`;
+
+  document.getElementById('root').innerHTML=html;
+}
+
+async function loadDate(dt){
+  const url = dt? `data/${dt}.json` : 'data/latest.json';
+  try{
+    const r=await fetch(url,{cache:'no-store'}); render(await r.json());
+  }catch(e){ document.getElementById('root').innerHTML=`<div class="empty"><b>尚無資料</b>第一份報告會在下一個交易日 15:00 後產生。</div>`; }
+}
+async function initHist(){
+  try{
+    const r=await fetch('data/index.json',{cache:'no-store'}); const j=await r.json();
+    if(j.dates && j.dates.length>1){
+      const s=document.getElementById('hist'); s.style.display='inline-block';
+      s.innerHTML='<option value="">最新</option>'+j.dates.map(d=>`<option value="${d}">${d}</option>`).join('');
+    }
+  }catch(e){}
+}
+loadDate(); initHist();
+</script>
+</body>
+</html>

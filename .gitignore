@@ -14,3 +14,6 @@ reports/launchd.out.log
 reports/launchd.err.log
 scan.log
 daily_scan_cloud.py
+
+# 本機預覽設定
+.claude/

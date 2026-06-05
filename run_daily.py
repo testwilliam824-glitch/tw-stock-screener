@@ -75,6 +75,22 @@ def main():
     print(f"[{date}] 完成 -> {out}")
     print(summary)
 
+    # 在 GitHub Actions 上自動把報告 + 儀表板資料推回 repo（本機跑則不推）
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        try:
+            subprocess.run(["git", "add", "docs/data", "reports/_範例報告.txt",
+                            str(out.relative_to(HERE)), "reports/run.log", "reports/skip.log"],
+                           cwd=str(HERE))
+            # 沒有變更就跳過
+            if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=str(HERE)).returncode != 0:
+                subprocess.run(["git", "-c", "user.name=stock-scan-bot",
+                                "-c", "user.email=actions@users.noreply.github.com",
+                                "commit", "-m", f"儀表板更新 {date}"], cwd=str(HERE))
+                subprocess.run(["git", "push"], cwd=str(HERE))
+                print("已推送儀表板資料到 repo")
+        except Exception as e:
+            print("CI 推送失敗:", e)
+
 
 if __name__ == "__main__":
     main()

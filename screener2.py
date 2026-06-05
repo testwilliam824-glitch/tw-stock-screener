@@ -185,10 +185,10 @@ def main():
     finalists["_60分量比"] = finalists["code"].map(lambda c: h_flags.get(c, (False, None))[1])
     finalists["全條件"] = finalists["⑤60分三黑轉紅"]   # 已含①③④，再加⑤
 
-    # ===== 決選股加料：基本面 + 籌碼（官方一次抓全市場）=====
+    # ===== 加料：基本面 + 籌碼（決選股與觀察清單都需要，故總是抓）=====
+    print("⑤ 補上基本面/籌碼欄位（官方一次抓全市場）...", flush=True)
+    enr = build_enrichment()
     if len(finalists):
-        print("⑤ 為決選股補上基本面/籌碼欄位 ...", flush=True)
-        enr = build_enrichment()
         for col in ENRICH_COLS:
             finalists[col] = finalists["code"].map(lambda c, k=col: (enr.get(c) or {}).get(k))
 
@@ -198,6 +198,16 @@ def main():
     df.to_csv("scan_all.csv", index=False, encoding="utf-8-sig")
     finalists.sort_values(["全條件", "型態分"], ascending=False).to_csv(
         "scan_finalists.csv", index=False, encoding="utf-8-sig")
+
+    # ===== 輸出網頁儀表板 JSON（GitHub Pages 用）=====
+    try:
+        from dashboard import build_payload, write_payload
+        cov = {"listed": sum(1 for v in uni.values() if v[2] == "上市"),
+               "otc": sum(1 for v in uni.values() if v[2] == "上櫃")}
+        date = pd.Timestamp.now().strftime("%Y-%m-%d")
+        write_payload(build_payload(df, finalists, enr, cov, date))
+    except Exception as e:
+        print("⚠️ 儀表板 JSON 輸出失敗:", e)
 
     print("\n" + "=" * 80)
     print(f"全市場掃描完成 {pd.Timestamp.now():%Y-%m-%d %H:%M}")
