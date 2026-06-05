@@ -40,32 +40,49 @@ def _num(s):
         return np.nan
 
 
+def _get_json(url, params=None, tries=4, sleep_s=3):
+    """帶重試的 GET → json；暫時性網路錯誤自動重試，全失敗才丟出。"""
+    last = None
+    for i in range(tries):
+        try:
+            r = requests.get(url, params=params, headers=H, timeout=30)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            last = e
+            if i < tries - 1:
+                time.sleep(sleep_s * (i + 1))   # 漸進式退避
+    raise last
+
+
 def official_universe(include_otc=True):
-    """官方全市場最新收盤：{code: (name, close)}。"""
+    """官方全市場最新收盤：{code: (name, close, market)}。"""
     uni = {}
-    # 上市
+    # 上市（重試）
     try:
-        r = requests.get("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL",
-                         params={"response": "json"}, headers=H, timeout=30)
-        for row in r.json().get("data", []):
+        j = _get_json("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL",
+                      params={"response": "json"})
+        for row in j.get("data", []):
             code, name, close = row[0].strip(), row[1].strip(), _num(row[7])
             if CODE_RE.match(code) and close == close:
                 uni[code] = (name, close, "上市")
     except Exception as e:
-        print("上市快照失敗:", e)
-    # 上櫃
+        print("⚠️ 上市快照重試後仍失敗:", e)
+    # 上櫃（重試）
     if include_otc:
         try:
-            r = requests.get("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
-                             headers=H, timeout=30)
-            for row in r.json():
+            j = _get_json("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
+            for row in j:
                 code = str(row.get("SecuritiesCompanyCode", "")).strip()
                 name = str(row.get("CompanyName", "")).strip()
                 close = _num(row.get("Close"))
                 if CODE_RE.match(code) and close == close:
                     uni[code] = (name, close, "上櫃")
         except Exception as e:
-            print("上櫃快照失敗:", e)
+            print("⚠️ 上櫃快照重試後仍失敗（本次將只掃上市，請留意覆蓋率）:", e)
+    n_listed = sum(1 for v in uni.values() if v[2] == "上市")
+    n_otc = sum(1 for v in uni.values() if v[2] == "上櫃")
+    print(f"   覆蓋率：上市 {n_listed} + 上櫃 {n_otc} = {len(uni)} 檔")
     return uni
 
 
