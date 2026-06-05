@@ -20,6 +20,7 @@ def _row(r):
         "macd_days": g("_翻紅幾根前"),
         "candle": bool(g("④日線三黑轉紅", False)),
         "min60": (None if g("⑤60分三黑轉紅") is None else bool(g("⑤60分三黑轉紅"))),
+        "min30": (None if g("⑤30分三黑轉紅") is None else bool(g("⑤30分三黑轉紅"))),
         "pattern": g("型態分"), "wedge": g("楔形"), "hs": g("頭肩底"),
         "insti3": g("三大法人張"), "foreign": g("外資張"), "trust": g("投信張"),
         "pe": g("PE"), "pb": g("PB"), "yield": g("殖利率"),

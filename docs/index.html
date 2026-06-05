@@ -179,6 +179,7 @@ function chip(item){
       <span class="flag ${item.macd?'on':''}">MACD翻紅${item.macd&&item.macd_days!=null?` ${item.macd_days==0?'今':item.macd_days+'日前'}`:''}</span>
       <span class="flag ${item.candle?'on':''}">日線三黑轉紅</span>
       ${item.min60!=null?`<span class="flag ${item.min60?'on':''}">60分對齊</span>`:''}
+      ${item.min30!=null?`<span class="flag ${item.min30?'on':''}">30分對齊</span>`:''}
     </div>
     ${item.warn?'<div class="warn">⚠ 官方／yfinance 收盤有落差，數據待確認</div>':''}
   </div>`;
@@ -199,7 +200,7 @@ function render(d){
   </div>
   <div class="cov">市場覆蓋：上市 <b>${c.listed||'—'}</b> ＋ 上櫃 <b>${c.otc||'—'}</b> = <b>${(c.listed||0)+(c.otc||0)}</b> 檔</div>`;
 
-  html+=`<div class="section-label">★ 決選股 · FINALISTS（①③④⑤ 全符合）</div>`;
+  html+=`<div class="section-label">★ 決選股 · FINALISTS（日線＋60分＋30分 全對齊）</div>`;
   if(d.finalists && d.finalists.length){
     html+=`<div class="cards">`+d.finalists.map((x,i)=>chip({...x,_i:i,_r:'★'})).join('')+`</div>`;
   }else{

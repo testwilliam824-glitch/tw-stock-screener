@@ -171,19 +171,23 @@ def main():
     finalists = df[df["日線通過"]].copy()
 
     print(f"\n③ 日線決選（MACD {args.macd_n}日內翻紅 且 日線三黑轉紅）：{len(finalists)} 檔")
-    print("④ 對決選股抓 60分線確認 ⑤ ...", flush=True)
-    h_flags = {}
+    print("④ 對決選股抓 60分 + 30分線確認 ⑤ ...", flush=True)
+    h60, h30 = {}, {}
     for code in finalists["code"]:
-        try:
-            intr = yf_fetch(code, "60m", "60d")
-            ok, det = three_black_then_red(intr) if not intr.empty else (False, {})
-            h_flags[code] = (ok, det.get("vol_ratio_redK"))
-        except Exception:
-            h_flags[code] = (False, None)
+        for iv, store in (("60m", h60), ("30m", h30)):
+            try:
+                intr = yf_fetch(code, iv, "60d")
+                ok, det = three_black_then_red(intr) if not intr.empty else (False, {})
+                store[code] = (ok, det.get("vol_ratio_redK"))
+            except Exception:
+                store[code] = (False, None)
         time.sleep(args.sleep)
-    finalists["⑤60分三黑轉紅"] = finalists["code"].map(lambda c: h_flags.get(c, (False, None))[0])
-    finalists["_60分量比"] = finalists["code"].map(lambda c: h_flags.get(c, (False, None))[1])
-    finalists["全條件"] = finalists["⑤60分三黑轉紅"]   # 已含①③④，再加⑤
+    finalists["⑤60分三黑轉紅"] = finalists["code"].map(lambda c: h60.get(c, (False, None))[0])
+    finalists["⑤30分三黑轉紅"] = finalists["code"].map(lambda c: h30.get(c, (False, None))[0])
+    finalists["_60分量比"] = finalists["code"].map(lambda c: h60.get(c, (False, None))[1])
+    finalists["_30分量比"] = finalists["code"].map(lambda c: h30.get(c, (False, None))[1])
+    # 全條件 = 日線(①③④) + 60分 + 30分 皆對齊
+    finalists["全條件"] = finalists["⑤60分三黑轉紅"] & finalists["⑤30分三黑轉紅"]
 
     # ===== 加料：基本面 + 籌碼（決選股與觀察清單都需要，故總是抓）=====
     print("⑤ 補上基本面/籌碼欄位（官方一次抓全市場）...", flush=True)
@@ -214,8 +218,8 @@ def main():
     print("=" * 80)
     full = finalists[finalists["全條件"]]
     cols = ["code", "name", "market", "price", "③MACD_Nin", "④日線三黑轉紅",
-            "⑤60分三黑轉紅", "三大法人張", "外資張", "投信張", "PE", "PB", "殖利率",
-            "型態分", "_資料警告"]
+            "⑤60分三黑轉紅", "⑤30分三黑轉紅", "三大法人張", "外資張", "投信張",
+            "PE", "PB", "殖利率", "型態分", "_資料警告"]
     cols = [c for c in cols if c in finalists.columns]   # 決選0檔時 enrich 欄不存在，過濾掉
     if len(full):
         print(f"\n★ 全條件命中（①③④⑤全過）：{len(full)} 檔")
