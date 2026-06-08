@@ -7,7 +7,7 @@
       → ③ 輸出 reports/YYYY-MM-DD.txt → ④ 盡力發系統通知(有就發，沒有就略過)
 不依賴任何本機檔案以外的東西；資料全部來自公開 API。
 """
-import sys, subprocess, datetime, platform, shutil
+import os, sys, subprocess, datetime, platform, shutil
 from pathlib import Path
 import requests
 
