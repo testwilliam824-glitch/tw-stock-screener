@@ -56,12 +56,16 @@ def _get_json(url, params=None, tries=4, sleep_s=3):
 
 
 def official_universe(include_otc=True):
-    """官方全市場最新收盤：{code: (name, close, market)}。"""
+    """官方全市場最新收盤：(uni={code:(name,close,market)}, 資料日期 'YYYY-MM-DD')。"""
     uni = {}
+    data_date = None
     # 上市（重試）
     try:
         j = _get_json("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL",
                       params={"response": "json"})
+        d = str(j.get("date", ""))            # 官方資料實際日期 YYYYMMDD
+        if len(d) == 8:
+            data_date = f"{d[:4]}-{d[4:6]}-{d[6:]}"
         for row in j.get("data", []):
             code, name, close = row[0].strip(), row[1].strip(), _num(row[7])
             if CODE_RE.match(code) and close == close:
@@ -82,8 +86,8 @@ def official_universe(include_otc=True):
             print("⚠️ 上櫃快照重試後仍失敗（本次將只掃上市，請留意覆蓋率）:", e)
     n_listed = sum(1 for v in uni.values() if v[2] == "上市")
     n_otc = sum(1 for v in uni.values() if v[2] == "上櫃")
-    print(f"   覆蓋率：上市 {n_listed} + 上櫃 {n_otc} = {len(uni)} 檔")
-    return uni
+    print(f"   覆蓋率：上市 {n_listed} + 上櫃 {n_otc} = {len(uni)} 檔（資料日 {data_date}）")
+    return uni, data_date
 
 
 def macd_turned_within(close, n=3):
@@ -139,7 +143,7 @@ def main():
     args = ap.parse_args()
 
     print("① 抓官方全市場快照 ...", flush=True)
-    uni = official_universe(include_otc=not args.no_otc)
+    uni, data_date = official_universe(include_otc=not args.no_otc)
     print(f"   全市場普通股：{len(uni)} 檔")
 
     # 價格漏斗
@@ -208,7 +212,7 @@ def main():
         from dashboard import build_payload, write_payload
         cov = {"listed": sum(1 for v in uni.values() if v[2] == "上市"),
                "otc": sum(1 for v in uni.values() if v[2] == "上櫃")}
-        date = pd.Timestamp.now().strftime("%Y-%m-%d")
+        date = data_date or pd.Timestamp.now().strftime("%Y-%m-%d")  # 用官方資料實際日期
         write_payload(build_payload(df, finalists, enr, cov, date))
     except Exception as e:
         print("⚠️ 儀表板 JSON 輸出失敗:", e)
